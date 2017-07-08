@@ -1,0 +1,90 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="author" content="langley, liangli171@gmail.com"><title>java图片验证码 · AoiNeko</title><meta name="description" content="背景 　公司的注册短信的服务本来是由有签名验证app直接调用所以一直相安无事，自从暴露h5的http接口以后，就受到了攻击。攻击者从一系列的ip用不同的手机号持续请求注册发送验证码接口，让我们不停发送注册验证码给随机的用户。不得以，开发经理使用注解标记几个不需要登录权限要求系统发送验证短信的接口，在"><meta name="keywords" content="Hexo,Java"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="renderer" content="webkit"><link rel="short icon" href="/images/favicon.png" type="image/x-icon"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/blog_basic.css"><link rel="stylesheet" href="/css/font-awesome.min.css"><link rel="alternate" type="application/atom+xml" title="ATOM 1.0" href="/atom.xml"></head><body><e class="sidebar animated fadeInDown"><div class="logo-title"><div class="title"><img src="/images/mylogo.jpg" style="width:127px;"><h3 title=""><a href="/">AoiNeko</a></h3><div class="description"><p>一些个记录</p></div></div></div><ul class="social-links"></ul><div class="footer"><a target="_blank" href="/"></a><div class="by_farbox"><a href="https://hexo.io/zh-cn/" target="_blank">Hexo&#65281;</a></div></div></e><div class="main"><div class="page-top animated fadeInDown"><div class="nav"><li><a href="/">首页</a></li><li><a href="/archives">归档</a></li></div><div class="information"><div class="back_btn"><li><a onclick="window.history.go(-1)" class="fa fa-chevron-left"> </a></li></div></div></div><div class="autopagerize_page_element"><div class="content"><div class="post-page"><div class="post animated fadeInDown"><div class="post-title"><h3><a>java图片验证码</a></h3></div><div class="post-content"><h4 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h4><p> 　公司的注册短信的服务本来是由有签名验证app直接调用所以一直相安无事，自从暴露h5的http接口以后，就受到了攻击。攻击者从一系列的ip用不同的手机号持续请求<br>注册发送验证码接口，让我们不停发送注册验证码给随机的用户。不得以，开发经理使用注解标记几个不需要登录权限要求系统发送验证短信的接口，在redis中根据prefix<br>+ip为key保存这个IP在一段时间内的请求短信的次数，超过阈值便加入黑名单，返回使用短信过于频繁的提示。</p>
+<p>  只是没过多久，就有客户打电话来投诉说不能发送短信了，可能是同一WiFi下的用户同时使用短信登录次数导致错杀。</p>
+<h4 id="图片验证码"><a href="#图片验证码" class="headerlink" title="图片验证码"></a>图片验证码</h4><p>  时间仓促，直接在网上找了个绘制2维码的工具类。主要思路就是随机颜色绘制背景，绘制一些干扰直线和早点之后，将ABCDEFGHJKLMNPQRSTUVWXYZ23456789里面<br>  的随机选取4位，绘制上面板，倾斜以后将图片流转化为base64字符串返回给前台。<br>  绘制图片使用的是java.awt包里面的Graphics2D</p>
+<pre><code> width,height为图片的宽高,code保存验证码用于验证
+// 设置干扰线
+for (int i = 0; i &lt; lineCount; i++) {
+  int xs = random.nextInt(width);
+  int ys = random.nextInt(height);
+  int xe = xs + random.nextInt(width);
+  int ye = ys + random.nextInt(height);
+  g.setColor(getRandColor(1, 255));
+  g.drawLine(xs, ys, xe, ye);
+}
+
+// 添加噪点
+float yawpRate = 0.01f;// 噪声率
+int area = (int) (yawpRate * width * height);
+for (int i = 0; i &lt; area; i++) {
+  int x = random.nextInt(width);
+  int y = random.nextInt(height);
+
+  buffImg.setRGB(x, y, random.nextInt(255));
+}
+shear(g, width, height, Color.white);
+
+String str1 = randomStr(codeCount);// 得到随机字符
+this.code = str1;
+for (int i = 0; i &lt; codeCount; i++) {
+  String strRand = str1.substring(i, i + 1);
+  g.setColor(getRandColor(1, 255));
+  // g.drawString(a,x,y);
+  // a为要画出来的东西，x和y表示要画的东西最左侧字符的基线位于此图形上下文坐标系的 (x, y) 位置处
+  AffineTransform affine = new AffineTransform();
+  affine.setToRotation(Math.PI / 4 * random.nextDouble() * (random.nextBoolean() ? 1 : -1), (width / codeCount) * i + fontWidth/2,  height / 3);
+  g.setTransform(affine);
+  g.drawString(strRand, i*fontWidth, height *  5 / 6);
+}
+</code></pre><p>  最后获取base64的字符串</p>
+<pre><code>public String getBase64ImageString() throws IOException {
+  ByteArrayOutputStream bos = new ByteArrayOutputStream();
+  ImageIO.write(buffImg, &quot;png&quot;, bos);
+  return org.apache.commons.net.util.Base64.encodeBase64String(bos.toByteArray());
+}
+</code></pre><p>  用redis的一个key记录ip访问限制接口的次数，如果超过阈值就将上面方法生成的图片base64字符串返回给前台,同时将code也以code:ip的key存入redis。公众号弹出图片</p>
+<p>  <img src="http://oakgltq5l.bkt.clouddn.com/Selection_006.png" alt="captcha"></p>
+<p>  用户输入后和redis中保存的code相比较，通过则发送短信。</p>
+<h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><p>  用了一个下午加了这个验证码给微信公众号的登录页面，能否在防御现存的恶意攻击同时将对用户的体验影响减少是关键，最终效果如何上线以后再看情况。<br>  如果对方还是要突破的话，可能后续还要在js提交发送短信时并添加签名机制了。</p>
+<h5 id="附："><a href="#附：" class="headerlink" title="附："></a>附：</h5><p>  获取IP的方法</p>
+<pre><code>    public String getIpAddrOneProxy(HttpServletRequest request) {
+        String ip = request.getHeader(&quot;X-Real-IP&quot;);
+//        logger.info(&quot;Real the IP address string is: &quot; + ip);
+        if (ip == null || ip.length() == 0 || &quot;unknown&quot;.equalsIgnoreCase(ip)) {
+            request.getHeader(&quot;x-forwarded-for&quot;);
+        }
+        if (ip == null || ip.length() == 0 || &quot;unknown&quot;.equalsIgnoreCase(ip)) {
+            ip = request.getHeader(&quot;Proxy-Client-IP&quot;);
+        }
+        if (ip == null || ip.length() == 0 || &quot;unknown&quot;.equalsIgnoreCase(ip)) {
+            ip = request.getHeader(&quot;WL-Proxy-Client-IP&quot;);
+        }
+        if (ip == null || ip.length() == 0 || &quot;unknown&quot;.equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        return ip;
+    }
+
+    // 获取请求主机IP地址,如果通过代理进来，则透过防火墙获取真实IP地址
+    public String getIpAddr(HttpServletRequest request) {
+        String strClientIp = request.getHeader(&quot;x-forwarded-for&quot;);
+//        logger.info(&quot;All the IP address string is: &quot; + strClientIp);
+        if (strClientIp == null || strClientIp.length() == 0 || &quot;unknown&quot;.equalsIgnoreCase(strClientIp)) {
+            strClientIp = request.getRemoteAddr();
+        } else if (!strClientIp.contains(&quot;,&quot;)) {
+            strClientIp = getIpAddrOneProxy(request);
+        } else {
+            List&lt;String&gt; ipList = new ArrayList&lt;&gt;(); 
+            ipList = Arrays.asList(strClientIp.split(&quot;,&quot;));
+            String strIp = new String();
+            for (int index = 0; index &lt; ipList.size(); index++) {
+                strIp = (String) ipList.get(index);
+                if (!(&quot;unknown&quot;.equalsIgnoreCase(strIp))) {
+                    strClientIp = strIp;
+                    break;
+                }
+            }
+        }
+
+        return strClientIp;
+    }
+</code></pre></div><div class="post-footer"><div class="meta"><div class="info"><i class="fa fa-sun-o"></i><span class="date">2017-04-26</span><i class="fa fa-tag"></i><a href="/tags/Java/" title="Java" class="tag">Java </a></div></div></div></div><div class="share"><div class="evernote"><a href="javascript:(function(){EN_CLIP_HOST='http://www.evernote.com';try{var%20x=document.createElement('SCRIPT');x.type='text/javascript';x.src=EN_CLIP_HOST+'/public/bookmarkClipper.js?'+(new%20Date().getTime()/100000);document.getElementsByTagName('head')[0].appendChild(x);}catch(e){location.href=EN_CLIP_HOST+'/clip.action?url='+encodeURIComponent(location.href)+'&amp;title='+encodeURIComponent(document.title);}})();" ref="nofollow" target="_blank" class="fa fa-bookmark"></a></div><div class="weibo"><a href="javascript:void((function(s,d,e){try{}catch(e){}var f='http://service.weibo.com/share/share.php?',u=d.location.href,p=['url=',e(u),'&amp;title=',e(d.title),'&amp;appkey=2924220432'].join('');function a(){if(!window.open([f,p].join(''),'mb',['toolbar=0,status=0,resizable=1,width=620,height=450,left=',(s.width-620)/2,',top=',(s.height-450)/2].join('')))u.href=[f,p].join('');};if(/Firefox/.test(navigator.userAgent)){setTimeout(a,0)}else{a()}})(screen,document,encodeURIComponent));" class="fa fa-weibo"></a></div><div class="twitter"><a href="http://twitter.com/home?status=,http://yoursite.com/2017/04/26/java图片验证码/,AoiNeko,java图片验证码,;" class="fa fa-twitter"></a></div></div><div class="pagination"><ul class="clearfix"><li class="pre pagbuttons"><a role="navigation" href="/2017/05/02/验证码-二/" title="验证码(二)" class="btn">上一篇</a></li><li class="next pagbuttons"><a role="navigation" href="/2017/04/11/rocketMQ安装和使用/" title="rocketMQ安装和使用" class="btn">下一篇</a></li></ul></div></div></div></div></div><script src="/js/jquery.js"></script><script src="/js/jquery-migrate-1.2.1.min.js"></script><script src="/js/jquery.appear.js"></script></body></html>

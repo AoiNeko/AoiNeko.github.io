@@ -1,0 +1,86 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="author" content="langley, liangli171@gmail.com"><title>Servlet的生命周期 · AoiNeko</title><meta name="description" content="Servlet定义是用Java编写的服务器端程序。其主要功能在于交互式地浏览和修改数据，生成动态Web内容。狭义的Servlet是指Java语言实现的一个接口，广义的Servlet是指任何实现了这个Servlet接口的类，一般情况下，人们将Servlet理解为后者。
+Servlet运行于支持Java"><meta name="keywords" content="Hexo,Java"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="renderer" content="webkit"><link rel="short icon" href="/images/favicon.png" type="image/x-icon"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/blog_basic.css"><link rel="stylesheet" href="/css/font-awesome.min.css"><link rel="alternate" type="application/atom+xml" title="ATOM 1.0" href="/atom.xml"></head><body><e class="sidebar animated fadeInDown"><div class="logo-title"><div class="title"><img src="/images/mylogo.jpg" style="width:127px;"><h3 title=""><a href="/">AoiNeko</a></h3><div class="description"><p>一些个记录</p></div></div></div><ul class="social-links"></ul><div class="footer"><a target="_blank" href="/"></a><div class="by_farbox"><a href="https://hexo.io/zh-cn/" target="_blank">Hexo&#65281;</a></div></div></e><div class="main"><div class="page-top animated fadeInDown"><div class="nav"><li><a href="/">首页</a></li><li><a href="/archives">归档</a></li></div><div class="information"><div class="back_btn"><li><a onclick="window.history.go(-1)" class="fa fa-chevron-left"> </a></li></div></div></div><div class="autopagerize_page_element"><div class="content"><div class="post-page"><div class="post animated fadeInDown"><div class="post-title"><h3><a>Servlet的生命周期</a></h3></div><div class="post-content"><h3 id="Servlet定义"><a href="#Servlet定义" class="headerlink" title="Servlet定义"></a>Servlet定义</h3><p>是用Java编写的服务器端程序。其主要功能在于交互式地浏览和修改数据，生成动态Web内容。狭义的Servlet是指Java语言实现的一个接口，广义的Servlet是指任何实现了这个Servlet接口的类，一般情况下，人们将Servlet理解为后者。</p>
+<p>Servlet运行于支持Java的应用服务器中。从实现上讲，Servlet可以响应任何类型的请求，但绝大多数情况下Servlet只用来扩展基于HTTP协议的Web服务器。</p>
+<p>使用或者继承javax.sevlet.GenericServlet来实现Serlet应用</p>
+<p>一般都是HttpServlet，提供doGet，doPut，doDelete，doPost等方法，对应http的PUT，POST，DELETE等</p>
+<h3 id="生命周期"><a href="#生命周期" class="headerlink" title="生命周期"></a>生命周期</h3><p>一般servlet在第一次被请求时，加载并初始化（init），进入服务阶段（service），在容器关闭时终止调用destroy方法</p>
+<h3 id="JSP"><a href="#JSP" class="headerlink" title="JSP"></a>JSP</h3><p> JSP是HttpServlet的扩展，JSP使Java代码和特定的预定义动作可以嵌入到静态页面中。JSP被JSP编译器编译成Java Servlets。一个JSP编译器可以把JSP编译成JAVA代码写的servlet然后再由JAVA编译器来编译成机器码，也可以直接编译成二进制码。</p>
+<pre><code>&lt;%@ include file=&quot;somefile.jsp&quot; %&gt;
+&lt;%@ page import=&quot;java.util.*&quot; %&gt; //example import导入样例
+&lt;%@ page contentType=&quot;text/html&quot; %&gt; //example contentType页面类型样例
+&lt;%@ page isErrorPage=false %&gt; //example for non error page无错页面样例
+&lt;%@ page isThreadSafe=true %&gt; //example for a thread safe JSP线程安全JSP样例
+</code></pre><ul>
+<li>out：JSPWriter，用来写入响应流的数据</li>
+<li>page：servlet自身</li>
+<li>pageContext：一个PageContext实例包括和整个页面相联系的数据，一个给定的HTML页面可以在多个JSP之间传递。</li>
+<li>request：HTTP request（请求）对象</li>
+<li>response：HTTP response（响应）对象</li>
+<li>session：HTTP session（服务端会话）对象</li>
+</ul>
+<p>jsp:include    和子过程类似，JAVA SERVLET暂时接管对其它指定的JSP页的请求和响应。当处理完该JSP页后就马上把控制权交还当前JSP页。这样JSP代码就可以在多个JSP页中共享而不用复制。<br>jsp:param    可以在jsp:include, jsp:forward或jsp:params块之间使用。指定一个将加入请求的当前参数组中的参数。<br>jsp:forward    用于处理对另一个JSP或SERVLET的请求和响应。控制权永远不会交还给当前JSP页。<br>jsp:plugin    Netscape Navigator的老版本和Internet Explorer使用不同的标签以嵌入一个applet。这个动作产生为嵌入一个APPLET所需要的指定浏览器标签。<br>jsp:fallback    如果浏览器不支持APPLETS则会显示的内容。<br>jsp:getProperty    从指定的JavaBean中获取一个属性值。<br>jsp:setProperty    在指定的JavaBean中设置一个属性值。<br>jsp:useBean    创建或者复用一个JavaBean变量到JSP页。</p>
+<pre><code>&lt;jsp:forward page=&quot;subpage.jsp&quot; &gt;
+     &lt;jsp:param name=&quot;forwardedFrom&quot; value=&quot;this.jsp&quot; /&gt;
+&lt;/jsp:forward&gt;
+</code></pre><h3 id="JSP样例"><a href="#JSP样例" class="headerlink" title="JSP样例"></a>JSP样例</h3><p>不管JSP编译器是生成SERVLET的JAVA源码，或者是直接发布二进制码，了解一下JSP编译器是如何把文件转换成一个JAVA SERVLET，都是很有帮助的。例如，看一下如下输入JSP和它最后生成的JAVA SERVLET：</p>
+<p>Input JSP</p>
+<pre><code>&lt;%@ page errorPage=&quot;myerror.jsp&quot; %&gt;
+&lt;%@ page import=&quot;com.foo.bar&quot; %&gt;
+
+&lt;html&gt;
+&lt;head&gt;
+&lt;%! int serverInstanceVariable = 1;%&gt;
+...
+&lt;% int localStackBasedVariable = 1; %&gt;
+&lt;table&gt;
+    &lt;tr&gt;&lt;td&gt;&lt;%= &quot;expanded inline data &quot; + 1 %&gt;&lt;/td&gt;&lt;/tr&gt;
+    ...
+</code></pre><p>Resulting servlet</p>
+<pre><code>package jsp_servlet;
+import java.util.*;
+import java.io.*;
+import javax.servlet.*;
+import javax.servlet.http.*;
+import javax.servlet.jsp.*;
+import javax.servlet.jsp.tagext.*;
+
+import com.foo.bar; //imported as a result of &lt;%@ page import=&quot;com.foo.bar&quot; %&gt;
+import ...
+
+class _myserlvet implements javax.servlet.Servlet, javax.servlet.jsp.HttpJspPage {
+    //inserted as a
+    //result of &lt;%! int serverInstanceVariable = 1;%&gt;
+    int serverInstanceVariable = 1;
+    ...
+
+    public void _jspService( javax.servlet.http.HttpServletRequest request,
+                            javax.servlet.http.HttpServletResponse response )
+        throws javax.servlet.ServletException,
+               java.io.IOException
+    {
+        javax.servlet.ServletConfig config = ...;//get the servlet config
+        Object page = this;
+        PageContext pageContext = ...;//get the page context for this request
+        javax.servlet.jsp.JspWriter out = pageContext.getOut();
+        HttpSession session = request.getSession( true );
+        try {
+             out.print( &quot;&lt;html&gt;\r\n&quot; );
+             out.print( &quot;&lt;head&gt;\r\n&quot; );
+             ...
+             //from &lt;% int localStackBasedVariable = 1; %&gt;
+             int localStackBasedVariable = 1;
+             ...
+             out.print( &quot;&lt;table&gt;\r\n&quot; );
+             out.print( &quot;   &lt;tr&gt;&lt;td&gt;&quot; );
+             //note, toStringOrBlank() converts the expression into a string or if
+             // the expression is null, it uses the empty string.
+             //from &lt;%= &quot;expanded inline data &quot; + 1 %&gt;
+             out.print( toStringOrBlank( &quot;expanded inline data &quot; + 1 ) );
+             out.print( &quot;   &lt;/td&gt;&lt;/tr&gt;\r\n&quot; );
+             ...
+        } catch ( Exception _exception ) {
+           //clean up and redirect to error page in &lt;%@ page errorPage=&quot;myerror.jsp&quot; %&gt;
+        }
+    }
+}
+</code></pre></div><div class="post-footer"><div class="meta"><div class="info"><i class="fa fa-sun-o"></i><span class="date">2016-08-02</span><i class="fa fa-tag"></i><a href="/tags/Java/" title="Java" class="tag">Java </a><a href="/tags/Servlet/" title="Servlet" class="tag">Servlet </a></div></div></div></div><div class="share"><div class="evernote"><a href="javascript:(function(){EN_CLIP_HOST='http://www.evernote.com';try{var%20x=document.createElement('SCRIPT');x.type='text/javascript';x.src=EN_CLIP_HOST+'/public/bookmarkClipper.js?'+(new%20Date().getTime()/100000);document.getElementsByTagName('head')[0].appendChild(x);}catch(e){location.href=EN_CLIP_HOST+'/clip.action?url='+encodeURIComponent(location.href)+'&amp;title='+encodeURIComponent(document.title);}})();" ref="nofollow" target="_blank" class="fa fa-bookmark"></a></div><div class="weibo"><a href="javascript:void((function(s,d,e){try{}catch(e){}var f='http://service.weibo.com/share/share.php?',u=d.location.href,p=['url=',e(u),'&amp;title=',e(d.title),'&amp;appkey=2924220432'].join('');function a(){if(!window.open([f,p].join(''),'mb',['toolbar=0,status=0,resizable=1,width=620,height=450,left=',(s.width-620)/2,',top=',(s.height-450)/2].join('')))u.href=[f,p].join('');};if(/Firefox/.test(navigator.userAgent)){setTimeout(a,0)}else{a()}})(screen,document,encodeURIComponent));" class="fa fa-weibo"></a></div><div class="twitter"><a href="http://twitter.com/home?status=,http://yoursite.com/2016/08/02/Servlet的生命周期/,AoiNeko,Servlet的生命周期,;" class="fa fa-twitter"></a></div></div><div class="pagination"><ul class="clearfix"><li class="pre pagbuttons"><a role="navigation" href="/2016/08/03/ubuntu-eclipse-integate-Maven/" title="ubuntu eclipse integrate Maven" class="btn">上一篇</a></li><li class="next pagbuttons"><a role="navigation" href="/2016/07/24/Java集合类/" title="Java集合类" class="btn">下一篇</a></li></ul></div></div></div></div></div><script src="/js/jquery.js"></script><script src="/js/jquery-migrate-1.2.1.min.js"></script><script src="/js/jquery.appear.js"></script></body></html>

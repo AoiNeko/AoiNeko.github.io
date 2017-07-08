@@ -1,0 +1,190 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="author" content="langley, liangli171@gmail.com"><title>Spring框架:spring- beans · AoiNeko</title><meta name="description" content="做java开发开始就一直使用spring框架, 不管是Struts,spring,hibernate还是spring mvc,spring,mybatis.做整合都是把其他框架的对象注入以bean为单位完成业务逻辑.说java是面向对象编程，使用spring则更像面向beans编程.
+spring容"><meta name="keywords" content="Hexo,Java"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="renderer" content="webkit"><link rel="short icon" href="/images/favicon.png" type="image/x-icon"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/blog_basic.css"><link rel="stylesheet" href="/css/font-awesome.min.css"><link rel="alternate" type="application/atom+xml" title="ATOM 1.0" href="/atom.xml"></head><body><e class="sidebar animated fadeInDown"><div class="logo-title"><div class="title"><img src="/images/mylogo.jpg" style="width:127px;"><h3 title=""><a href="/">AoiNeko</a></h3><div class="description"><p>一些个记录</p></div></div></div><ul class="social-links"></ul><div class="footer"><a target="_blank" href="/"></a><div class="by_farbox"><a href="https://hexo.io/zh-cn/" target="_blank">Hexo&#65281;</a></div></div></e><div class="main"><div class="page-top animated fadeInDown"><div class="nav"><li><a href="/">首页</a></li><li><a href="/archives">归档</a></li></div><div class="information"><div class="back_btn"><li><a onclick="window.history.go(-1)" class="fa fa-chevron-left"> </a></li></div></div></div><div class="autopagerize_page_element"><div class="content"><div class="post-page"><div class="post animated fadeInDown"><div class="post-title"><h3><a>Spring框架:spring- beans</a></h3></div><div class="post-content"><p>做java开发开始就一直使用spring框架, 不管是Struts,spring,hibernate还是spring mvc,spring,mybatis.<br>做整合都是把其他框架的对象注入以bean为单位完成业务逻辑.说java是面向对象编程，使用spring则更像面向beans编程.</p>
+<p>spring容器启动时调用的方法如下：</p>
+<pre><code>public void refresh() throws BeansException, IllegalStateException {
+    synchronized (this.startupShutdownMonitor) {
+        // Prepare this context for refreshing.
+        prepareRefresh();
+
+        // Tell the subclass to refresh the internal bean factory.
+        ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
+
+        // Prepare the bean factory for use in this context.
+        prepareBeanFactory(beanFactory);
+
+        try {
+            // Allows post-processing of the bean factory in context subclasses.
+            postProcessBeanFactory(beanFactory);
+
+            // Invoke factory processors registered as beans in the context.
+            invokeBeanFactoryPostProcessors(beanFactory);
+
+            // Register bean processors that intercept bean creation.
+            registerBeanPostProcessors(beanFactory);
+
+            // Initialize message source for this context.
+            initMessageSource();
+
+            // Initialize event multicaster for this context.
+            initApplicationEventMulticaster();
+
+            // Initialize other special beans in specific context subclasses.
+            onRefresh();
+
+            // Check for listener beans and register them.
+            registerListeners();
+
+            // Instantiate all remaining (non-lazy-init) singletons.
+            finishBeanFactoryInitialization(beanFactory);
+
+            // Last step: publish corresponding event.
+            finishRefresh();
+        }
+
+        catch (BeansException ex) {
+            if (logger.isWarnEnabled()) {
+                logger.warn(&quot;Exception encountered during context initialization - &quot; +
+                        &quot;cancelling refresh attempt: &quot; + ex);
+            }
+
+            // Destroy already created singletons to avoid dangling resources.
+            destroyBeans();
+
+            // Reset &apos;active&apos; flag.
+            cancelRefresh(ex);
+
+            // Propagate exception to caller.
+            throw ex;
+        }
+    }
+} 
+</code></pre><p>给我的感觉spring容器的启动就是准备beanFactory并将bean配置读取并初始化保存起来的过程.从xml配置文件,或者现在用的最多的注解中读取bean的配置</p>
+<h3 id="bean-scope"><a href="#bean-scope" class="headerlink" title="bean scope"></a>bean scope</h3><p>ConfigurableBeanFactory中有的两种scope</p>
+<pre><code>String SCOPE_SINGLETON = &quot;singleton&quot;;//默认使用单例.在spring容器中通过getBean(&quot;beanName&quot;)获取的都是单例
+
+String SCOPE_PROTOTYPE = &quot;prototype&quot;;//每次获取bean时都生成新的实例
+</code></pre><h3 id="getBean"><a href="#getBean" class="headerlink" title="getBean"></a>getBean</h3><p>开发中如果没有使用@Autowired注解 自动注入bean时, 经常会手动获取spring context 以后调用getBean(“myBean”)方法.</p>
+<pre><code>protected &lt;T&gt; T doGetBean(
+            final String name, final Class&lt;T&gt; requiredType, final Object[] args, boolean typeCheckOnly) {
+        //根据bean名称获取缓存的bean或beanFactory的实例
+        Object sharedInstance = getSingleton(beanName);
+
+        //如果获取实例成功
+        if (sharedInstance != null &amp;&amp; args == null) {
+          //获取bean实例             
+            bean = getObjectForBeanInstance(sharedInstance, name, beanName, null);
+            //在这个getObjectForBeanInstance中判断是bean实例还是beanFactory实例.如果是工厂实例则用factory.getObject()生成实例并保存
+      }            
+      else{
+          //如果存在父级factory 直接委派父级beanFactory的getBean方法
+          BeanFactory parentBeanFactory = getParentBeanFactory();
+          if (parentBeanFactory != null &amp;&amp; !containsBeanDefinition(beanName)) {backs
+              // Not found -&gt; check parent.
+              String nameToLookup = originalBeanName(name);
+              if (args != null) {
+                  // Delegation to parent with explicit args.
+                  return (T) parentBeanFactory.getBean(nameToLookup, args);
+              }
+              else {
+                  // No args -&gt; delegate to standard getBean method.
+                  return parentBeanFactory.getBean(nameToLookup, requiredType);
+              }
+          }
+
+          //获取bean的  RootBeanDefinition
+          //A root bean definition represents the merged bean definition that a specific bean in a Spring BeanFactory at runtime.
+          final RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
+          checkMergedBeanDefinition(mbd, beanName, args);
+
+          // Guarantee initialization of beans that the current bean depends on.
+          //类似虚拟机加载Class一样 将bean依赖的的bean先加载进来
+          String[] dependsOn = mbd.getDependsOn();
+          if (dependsOn != null) {
+              for (String dependsOnBean : dependsOn) {
+                  getBean(dependsOnBean);
+                  registerDependentBean(dependsOnBean, beanName);
+              }
+          }
+
+
+          //开始创建bean,根据prototype来创建实例
+
+          if (mbd.isSingleton()) {
+              sharedInstance = getSingleton(beanName, new ObjectFactory&lt;Object&gt;() {
+                  public Object getObject() throws BeansException {
+                      try {
+                          return createBean(beanName, mbd, args);
+                      }
+                      catch (BeansException ex) {
+                          // Explicitly remove instance from singleton cache: It might have been put there
+                          // eagerly by the creation process, to allow for circular reference resolution.
+                          // Also remove any beans that received a temporary reference to the bean.
+                          destroySingleton(beanName);
+                          throw ex;
+                      }
+                  }
+              });
+              bean = getObjectForBeanInstance(sharedInstance, name, beanName, mbd);
+          }
+
+          else if (mbd.isPrototype()) {
+              // It&apos;s a prototype -&gt; create a new instance.
+              Object prototypeInstance = null;
+              try {
+                  beforePrototypeCreation(beanName);
+                  prototypeInstance = createBean(beanName, mbd, args);
+              }
+              finally {
+                  afterPrototypeCreation(beanName);
+              }
+              bean = getObjectForBeanInstance(prototypeInstance, name, beanName, mbd);
+          }
+
+          else {
+              String scopeName = mbd.getScope();
+              final Scope scope = this.scopes.get(scopeName);
+              if (scope == null) {
+                  throw new IllegalStateException(&quot;No Scope registered for scope &apos;&quot; + scopeName + &quot;&apos;&quot;);
+              }
+              try {
+                  Object scopedInstance = scope.get(beanName, new ObjectFactory&lt;Object&gt;() {
+                      public Object getObject() throws BeansException {
+                          beforePrototypeCreation(beanName);
+                          try {
+                              return createBean(beanName, mbd, args);
+                          }
+                          finally {
+                              afterPrototypeCreation(beanName);
+                          }
+                      }
+                  });
+                  bean = getObjectForBeanInstance(scopedInstance, name, beanName, mbd);
+              }
+              catch (IllegalStateException ex) {
+                  throw new BeanCreationException(beanName,
+                          &quot;Scope &apos;&quot; + scopeName + &quot;&apos; is not active for the current thread; &quot; +
+                          &quot;consider defining a scoped proxy for this bean if you intend to refer to it from a singleton&quot;,
+                          ex);
+              }
+          }
+
+
+          //最后如果传入了requiredType参数则进行类型转换
+          if (requiredType != null &amp;&amp; bean != null &amp;&amp; !requiredType.isAssignableFrom(bean.getClass())) {
+              try {
+                  return getTypeConverter().convertIfNecessary(bean, requiredType);
+              }
+              catch (TypeMismatchException ex) {
+                  if (logger.isDebugEnabled()) {
+                      logger.debug(&quot;Failed to convert bean &apos;&quot; + name + &quot;&apos; to required type [&quot; +
+                              ClassUtils.getQualifiedName(requiredType) + &quot;]&quot;, ex);
+                  }
+                  throw new BeanNotOfRequiredTypeException(name, requiredType, bean.getClass());
+              }
+          }
+
+      }
+
+ }
+</code></pre><h4 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h4><p>spring像一个大工厂,将我们配置在代码里或这xml里面的bean对象,自动组装成对象供开发者业务使用. 使用spring框架的项目中,程序员做的事情绝大部分就是开发bean然后配置bean. 这篇只是了解一下spring容器的启动,和bean是如何组装的.而配置文件的解析和大量的注解配置的bean的读取是怎么做的, 接下来再看吧</p>
+</div><div class="post-footer"><div class="meta"><div class="info"><i class="fa fa-sun-o"></i><span class="date">2017-06-06</span><i class="fa fa-tag"></i><a href="/tags/java/" title="java" class="tag">java </a></div></div></div></div><div class="share"><div class="evernote"><a href="javascript:(function(){EN_CLIP_HOST='http://www.evernote.com';try{var%20x=document.createElement('SCRIPT');x.type='text/javascript';x.src=EN_CLIP_HOST+'/public/bookmarkClipper.js?'+(new%20Date().getTime()/100000);document.getElementsByTagName('head')[0].appendChild(x);}catch(e){location.href=EN_CLIP_HOST+'/clip.action?url='+encodeURIComponent(location.href)+'&amp;title='+encodeURIComponent(document.title);}})();" ref="nofollow" target="_blank" class="fa fa-bookmark"></a></div><div class="weibo"><a href="javascript:void((function(s,d,e){try{}catch(e){}var f='http://service.weibo.com/share/share.php?',u=d.location.href,p=['url=',e(u),'&amp;title=',e(d.title),'&amp;appkey=2924220432'].join('');function a(){if(!window.open([f,p].join(''),'mb',['toolbar=0,status=0,resizable=1,width=620,height=450,left=',(s.width-620)/2,',top=',(s.height-450)/2].join('')))u.href=[f,p].join('');};if(/Firefox/.test(navigator.userAgent)){setTimeout(a,0)}else{a()}})(screen,document,encodeURIComponent));" class="fa fa-weibo"></a></div><div class="twitter"><a href="http://twitter.com/home?status=,http://yoursite.com/2017/06/06/Spring框架-spring-beans/,AoiNeko,Spring框架:spring- beans,;" class="fa fa-twitter"></a></div></div><div class="pagination"><ul class="clearfix"><li class="pre pagbuttons"><a role="navigation" href="/2017/07/08/对象状态的位操作/" title="对象状态的位操作" class="btn">上一篇</a></li><li class="next pagbuttons"><a role="navigation" href="/2017/05/02/验证码-二/" title="验证码(二)" class="btn">下一篇</a></li></ul></div></div></div></div></div><script src="/js/jquery.js"></script><script src="/js/jquery-migrate-1.2.1.min.js"></script><script src="/js/jquery.appear.js"></script></body></html>

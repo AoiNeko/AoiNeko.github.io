@@ -1,0 +1,25 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="author" content="langley, liangli171@gmail.com"><title>Maven jar 包操作 · AoiNeko</title><meta name="description" content="添加jar包到本地maven库mvn install:install-file 
+-DgroupId=FCKeditor 
+-DartifactId=FCKeditor 
+-Dversion=2.3 
+-Dpackaging=jar 
+-Dfile=d:\FCKeditor-2.3.jar 
+发布j"><meta name="keywords" content="Hexo,Java"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="renderer" content="webkit"><link rel="short icon" href="/images/favicon.png" type="image/x-icon"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/blog_basic.css"><link rel="stylesheet" href="/css/font-awesome.min.css"><link rel="alternate" type="application/atom+xml" title="ATOM 1.0" href="/atom.xml"></head><body><e class="sidebar animated fadeInDown"><div class="logo-title"><div class="title"><img src="/images/mylogo.jpg" style="width:127px;"><h3 title=""><a href="/">AoiNeko</a></h3><div class="description"><p>一些个记录</p></div></div></div><ul class="social-links"></ul><div class="footer"><a target="_blank" href="/"></a><div class="by_farbox"><a href="https://hexo.io/zh-cn/" target="_blank">Hexo&#65281;</a></div></div></e><div class="main"><div class="page-top animated fadeInDown"><div class="nav"><li><a href="/">首页</a></li><li><a href="/archives">归档</a></li></div><div class="information"><div class="back_btn"><li><a onclick="window.history.go(-1)" class="fa fa-chevron-left"> </a></li></div></div></div><div class="autopagerize_page_element"><div class="content"><div class="post-page"><div class="post animated fadeInDown"><div class="post-title"><h3><a>Maven jar 包操作</a></h3></div><div class="post-content"><h4 id="添加jar包到本地maven库"><a href="#添加jar包到本地maven库" class="headerlink" title="添加jar包到本地maven库"></a>添加jar包到本地maven库</h4><pre><code>mvn install:install-file 
+-DgroupId=FCKeditor 
+-DartifactId=FCKeditor 
+-Dversion=2.3 
+-Dpackaging=jar 
+-Dfile=d:\FCKeditor-2.3.jar 
+</code></pre><h4 id="发布jar包到远程mvn库"><a href="#发布jar包到远程mvn库" class="headerlink" title="发布jar包到远程mvn库"></a>发布jar包到远程mvn库</h4><pre><code>mvn deploy:deploy-file
+-DgroupId=lotus.domino
+-DartifactId=NCSO
+-Dversion=7.0
+-Dpackaging=jar
+-Dfile=E:\dominosso\dominoapp\dominoapp\WEB-INF\lib\NCSO.jar
+-Durl=http://yourlocalrepository:8888/archiva/repository/internal
+-DrepositoryId=internal
+</code></pre><h4 id="迁移本地mvn库路径"><a href="#迁移本地mvn库路径" class="headerlink" title="迁移本地mvn库路径"></a>迁移本地mvn库路径</h4><p>maven仓库默认路径是 ${user.home}/.m2/repository, 但是我的笔记本系统盘空间实在不够了<br>只能迁移到挂载的windows硬盘上去.</p>
+<pre><code>mv ~/.m2 ~/windisk/
+</code></pre><p>移动后在maven的setting.xml设置localRepository路径即可</p>
+<p>然后在idea里面settings设置好本地mvn库路径和setting文件位置即可</p>
+</div><div class="post-footer"><div class="meta"><div class="info"><i class="fa fa-sun-o"></i><span class="date">2017-02-16</span><i class="fa fa-tag"></i><a href="/tags/maven/" title="maven" class="tag">maven </a></div></div></div></div><div class="share"><div class="evernote"><a href="javascript:(function(){EN_CLIP_HOST='http://www.evernote.com';try{var%20x=document.createElement('SCRIPT');x.type='text/javascript';x.src=EN_CLIP_HOST+'/public/bookmarkClipper.js?'+(new%20Date().getTime()/100000);document.getElementsByTagName('head')[0].appendChild(x);}catch(e){location.href=EN_CLIP_HOST+'/clip.action?url='+encodeURIComponent(location.href)+'&amp;title='+encodeURIComponent(document.title);}})();" ref="nofollow" target="_blank" class="fa fa-bookmark"></a></div><div class="weibo"><a href="javascript:void((function(s,d,e){try{}catch(e){}var f='http://service.weibo.com/share/share.php?',u=d.location.href,p=['url=',e(u),'&amp;title=',e(d.title),'&amp;appkey=2924220432'].join('');function a(){if(!window.open([f,p].join(''),'mb',['toolbar=0,status=0,resizable=1,width=620,height=450,left=',(s.width-620)/2,',top=',(s.height-450)/2].join('')))u.href=[f,p].join('');};if(/Firefox/.test(navigator.userAgent)){setTimeout(a,0)}else{a()}})(screen,document,encodeURIComponent));" class="fa fa-weibo"></a></div><div class="twitter"><a href="http://twitter.com/home?status=,http://yoursite.com/2017/02/16/Maven-jar-包操作/,AoiNeko,Maven jar 包操作,;" class="fa fa-twitter"></a></div></div><div class="pagination"><ul class="clearfix"><li class="pre pagbuttons"><a role="navigation" href="/2017/02/16/Spring项目转spring-boot/" title="Spring项目转spring-boot" class="btn">上一篇</a></li><li class="next pagbuttons"><a role="navigation" href="/2016/08/07/SQL事物隔离级别/" title="SQL事物隔离级别" class="btn">下一篇</a></li></ul></div></div></div></div></div><script src="/js/jquery.js"></script><script src="/js/jquery-migrate-1.2.1.min.js"></script><script src="/js/jquery.appear.js"></script></body></html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="author" content="langley, liangli171@gmail.com"><title>rocketMQ安装和使用 · AoiNeko</title><meta name="description" content="阿里已经开源rocketmq并贡献给了apache，官网：http://rocketmq.incubator.apache.org/
+ 安装rocketmq要求64bit Linux/Mac系统，64bit 1.7以上的jdk.不过在测试环境我用32bit jdk1.8运行也没什么问题。
+下载： w"><meta name="keywords" content="Hexo,Java"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="renderer" content="webkit"><link rel="short icon" href="/images/favicon.png" type="image/x-icon"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/blog_basic.css"><link rel="stylesheet" href="/css/font-awesome.min.css"><link rel="alternate" type="application/atom+xml" title="ATOM 1.0" href="/atom.xml"></head><body><e class="sidebar animated fadeInDown"><div class="logo-title"><div class="title"><img src="/images/mylogo.jpg" style="width:127px;"><h3 title=""><a href="/">AoiNeko</a></h3><div class="description"><p>一些个记录</p></div></div></div><ul class="social-links"></ul><div class="footer"><a target="_blank" href="/"></a><div class="by_farbox"><a href="https://hexo.io/zh-cn/" target="_blank">Hexo&#65281;</a></div></div></e><div class="main"><div class="page-top animated fadeInDown"><div class="nav"><li><a href="/">首页</a></li><li><a href="/archives">归档</a></li></div><div class="information"><div class="back_btn"><li><a onclick="window.history.go(-1)" class="fa fa-chevron-left"> </a></li></div></div></div><div class="autopagerize_page_element"><div class="content"><div class="post-page"><div class="post animated fadeInDown"><div class="post-title"><h3><a>rocketMQ安装和使用</a></h3></div><div class="post-content"><p>阿里已经开源rocketmq并贡献给了apache，官网：<a href="http://rocketmq.incubator.apache.org/" target="_blank" rel="external">http://rocketmq.incubator.apache.org/</a></p>
+<h1 id="安装"><a href="#安装" class="headerlink" title=" 安装"></a> 安装</h1><p>rocketmq要求64bit Linux/Mac系统，64bit 1.7以上的jdk.不过在测试环境我用32bit jdk1.8运行也没什么问题。</p>
+<p><strong><em>下载：</em></strong><br> wget <a href="https://www.apache.org/dyn/closer.cgi?path=incubator/rocketmq/4.0.0-incubating/rocketmq-all-4.0.0-incubating-bin-release.zip" target="_blank" rel="external">https://www.apache.org/dyn/closer.cgi?path=incubator/rocketmq/4.0.0-incubating/rocketmq-all-4.0.0-incubating-bin-release.zip</a></p>
+<p><strong><em>解压:</em></strong><br>unzip rocketmq-all-4.0.0-incubating-bin-release.zip后即可用bin目录中的启动脚本</p>
+<p><strong><em>修改参数：</em></strong><br>在bin目录下的startbroker.sh和startserver.sh脚本中<br>    JAVA_OPT=”${JAVA_OPT} -server -Xms4g -Xmx4g -Xmn2g -XX:PermSize=128m -XX:MaxPermSize=320m”<br>设置堆内存大小，我下载的版本中Xms和Xmx都设置的很大，公司测试机和我本机都无法启动，修改成512m然后Xmn设置成Xms的一半<br>    JAVA_OPT=”${JAVA_OPT} -server -Xms512m -Xmx512m -Xmn256m -XX:PermSize=128m -XX:MaxPermSize=320m”</p>
+<p><strong>启动脚本</strong></p>
+<pre><code>cd /home/langley/windisk/rocketmq/apache-rocketmq-all
+nohup sh bin/mqnamesrv &amp;
+nohup sh bin/mqbroker -n 10.35.22.158:9876 -c broker.p &amp;
+</code></pre><p>启动 -c读取的配置文件中配置了一行 brokerIP1=10.35.22.158，因为本机安装了docker，在多网卡下broker选择了靠前的170网段的ip，注册到nameserver上取到的broker地址会变成170.XX.XX.XX:10911，因而不能正常接受消息</p>
+<h1 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h1><p><strong>producer：</strong><br>maven引入阿里云的 ons-client</p>
+<pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;com.aliyun.openservices&lt;/groupId&gt;
+    &lt;artifactId&gt;ons-client&lt;/artifactId&gt;
+    &lt;version&gt;1.1.27&lt;/version&gt;
+&lt;/dependency&gt;
+</code></pre><p>在Springboot中创建ProducerBean（properties配置在application.yml）</p>
+<pre><code>@Bean(initMethod = &quot;start&quot;, destroyMethod = &quot;shutdown&quot;)
+public ProducerBean producer() {
+    ProducerBean producer = new ProducerBean();
+
+    Properties properties = new Properties();
+    properties.setProperty(&quot;AccessKey&quot;, accessKey);
+    properties.setProperty(&quot;SecretKey&quot;, secretKey);
+    properties.setProperty(&quot;ProducerId&quot;, producerId);
+
+    if (StringUtils.isNotEmpty(nameSrvAddr)) {
+        properties.setProperty(PropertyKeyConst.NAMESRV_ADDR, nameSrvAddr);
+    }
+
+    producer.setProperties(properties);
+
+    return producer;
+}
+</code></pre><p>  发消息（注入ProducerBean为producer ）：</p>
+<pre><code>producer.send(new Message(MQConstants.TRADE_TOPIC, MQConstants.ORDER_START_TAG,
+              &quot;ORDER_START_&quot; + order.getIdentifier(), JsonUtils.toJson(contentMap).getBytes()));
+</code></pre><p><strong>consumer:</strong></p>
+<pre><code>消费者配置需要除了同样设置秘钥和id之外需要设置一个map对象指定topic和tag对应的lisener， listener是MessageListener的实现，在comsume方法中处理业务逻辑。我们在项目中使用了一个注解配置每个listener对应的topic，tag和consumerId。
+
+@Bean(name = &quot;consumeServer&quot;, initMethod = &quot;start&quot;, destroyMethod = &quot;shutdown&quot;)
+public ConsumerServer customerServer() {
+    List&lt;ConsumerBean&gt; consumerBeans = null;
+
+    Map&lt;String, MessageListener&gt; messageListeners = SpringContextUtils.getApplicationContext().getBeansOfType(MessageListener.class);
+
+    if (messageListeners != null &amp;&amp; messageListeners.size() &gt; 0) {
+        consumerBeans = messageListeners.entrySet().stream().map(entry -&gt; {
+            ConsumerBean consumerBean = new ConsumerBean();
+
+            MessageListener listener = entry.getValue();
+            Subscription subscription = new Subscription();
+
+            QueueListener queueListener = listener.getClass().getAnnotation(QueueListener.class);
+            subscription.setExpression(queueListener.expression());
+            subscription.setTopic(queueListener.topic());
+
+            Map&lt;Subscription, MessageListener&gt; subscriptionTable = new HashMap&lt;&gt;();
+            subscriptionTable.put(subscription, listener);
+            consumerBean.setSubscriptionTable(subscriptionTable);
+
+            Properties properties = new Properties();
+            properties.setProperty(&quot;AccessKey&quot;, accessKey);
+            properties.setProperty(&quot;SecretKey&quot;, secretKey);
+            properties.setProperty(&quot;ConsumerId&quot;, queueListener.consumerId());
+
+            if (StringUtils.isNotEmpty(nameSrvAddr)) {
+                properties.setProperty(PropertyKeyConst.NAMESRV_ADDR, nameSrvAddr);
+            }
+
+            consumerBean.setProperties(properties);
+
+            return consumerBean;
+        }).collect(Collectors.toList());
+    }
+
+    ConsumerServer consumerServer = new ConsumerServer();
+    consumerServer.setConsumerBeanList(consumerBeans);
+    return consumerServer;
+}
+</code></pre><p>我们在项目中使用rocketmq也是出于阿里云有强大的MQ消息服务，在我们将就系统改造成spring cloud微服务架构的过程中，涉及到旧数据库和新数据库并行存在时需要一个稳定，准实时的队列工具，保证两个数据库的数据同步。等到迁移完成时则可以移除不需要的consumer，而不影响现在已经有的业务逻辑，从而只留下以前的数据，避免继续在之前项目里面填坑了</p>
+</div><div class="post-footer"><div class="meta"><div class="info"><i class="fa fa-sun-o"></i><span class="date">2017-04-11</span><i class="fa fa-tag"></i><a href="/tags/Java/" title="Java" class="tag">Java </a></div></div></div></div><div class="share"><div class="evernote"><a href="javascript:(function(){EN_CLIP_HOST='http://www.evernote.com';try{var%20x=document.createElement('SCRIPT');x.type='text/javascript';x.src=EN_CLIP_HOST+'/public/bookmarkClipper.js?'+(new%20Date().getTime()/100000);document.getElementsByTagName('head')[0].appendChild(x);}catch(e){location.href=EN_CLIP_HOST+'/clip.action?url='+encodeURIComponent(location.href)+'&amp;title='+encodeURIComponent(document.title);}})();" ref="nofollow" target="_blank" class="fa fa-bookmark"></a></div><div class="weibo"><a href="javascript:void((function(s,d,e){try{}catch(e){}var f='http://service.weibo.com/share/share.php?',u=d.location.href,p=['url=',e(u),'&amp;title=',e(d.title),'&amp;appkey=2924220432'].join('');function a(){if(!window.open([f,p].join(''),'mb',['toolbar=0,status=0,resizable=1,width=620,height=450,left=',(s.width-620)/2,',top=',(s.height-450)/2].join('')))u.href=[f,p].join('');};if(/Firefox/.test(navigator.userAgent)){setTimeout(a,0)}else{a()}})(screen,document,encodeURIComponent));" class="fa fa-weibo"></a></div><div class="twitter"><a href="http://twitter.com/home?status=,http://yoursite.com/2017/04/11/rocketMQ安装和使用/,AoiNeko,rocketMQ安装和使用,;" class="fa fa-twitter"></a></div></div><div class="pagination"><ul class="clearfix"><li class="pre pagbuttons"><a role="navigation" href="/2017/04/26/java图片验证码/" title="java图片验证码" class="btn">上一篇</a></li><li class="next pagbuttons"><a role="navigation" href="/2017/03/20/create-Singleton-in-Java/" title="create Singleton in Java" class="btn">下一篇</a></li></ul></div></div></div></div></div><script src="/js/jquery.js"></script><script src="/js/jquery-migrate-1.2.1.min.js"></script><script src="/js/jquery.appear.js"></script></body></html>
