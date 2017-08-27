@@ -1,0 +1,33 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="author" content="langley, liangli171@gmail.com"><title>redis分布式锁应用 · AoiNeko</title><meta name="description" content="在微服务或者分布式这种可扩容的系统中，实现分布式锁是必要的。 redis提供了一种便利的设计模式，利用redis单线程模型，redis的setnx，getset等命令都是原子性的
+其实现模式就在SETNX的文档中 https://redis.io/commands/setnx
+实现以简单的锁定一个车"><meta name="keywords" content="Hexo,Java"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="renderer" content="webkit"><link rel="short icon" href="/images/favicon.png" type="image/x-icon"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/blog_basic.css"><link rel="stylesheet" href="/css/font-awesome.min.css"><link rel="alternate" type="application/atom+xml" title="ATOM 1.0" href="/atom.xml"></head><body><e class="sidebar animated fadeInDown"><div class="logo-title"><div class="title"><img src="/images/mylogo.jpg" style="width:127px;"><h3 title=""><a href="/">AoiNeko</a></h3><div class="description"><p>一些个记录</p></div></div></div><ul class="social-links"></ul><div class="footer"><a target="_blank" href="/"></a><div class="by_farbox"><a href="https://hexo.io/zh-cn/" target="_blank">Hexo&#65281;</a></div></div></e><div class="main"><div class="page-top animated fadeInDown"><div class="nav"><li><a href="/">首页</a></li><li><a href="/archives">归档</a></li></div><div class="information"><div class="back_btn"><li><a onclick="window.history.go(-1)" class="fa fa-chevron-left"> </a></li></div></div></div><div class="autopagerize_page_element"><div class="content"><div class="post-page"><div class="post animated fadeInDown"><div class="post-title"><h3><a>redis分布式锁应用</a></h3></div><div class="post-content"><h4 id=""><a href="#" class="headerlink" title=" "></a> </h4><p>在微服务或者分布式这种可扩容的系统中，实现分布式锁是必要的。 redis提供了一种便利的设计模式，利用redis单线程模型，redis的setnx，getset等命令都是原子性的</p>
+<p>其实现模式就在SETNX的文档中 <a href="https://redis.io/commands/setnx" target="_blank" rel="external">https://redis.io/commands/setnx</a></p>
+<h4 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h4><p>以简单的锁定一个车位为例子</p>
+<pre><code>if（jedis.setnx(LOCK.SPACE+spaceId, timeoutTimestamp) &gt;0） //setnx返回&gt;1，设置spaceId的锁成功
+else
+    if (jedis.get(LOCK.SPACE+spaceId) &lt; currentTimestamp) //车位锁中保留的超时时间小于当前时间，说明已超时
+        try retriveTimestamp = jedis.getSet(LOCK.SPACE+spaceId, timeoutTimestamp2) //GETSET方法 获取锁中保存的时间
+        if (retriveTimestamp &lt; currentTimestamp)  doGetlockSuccess() //如果存在多个线程竞争获取锁
+        //第一个获取到锁的才能获取到已超时的时间戳，而后续的会通过getset方法获取到上一个线程set的没有超时的时间戳。
+        else  doGetLockfail()
+</code></pre><p>而在redis 2.6.12之后 SET方法添加了以下几个参数</p>
+<pre><code>EX seconds -- Set the specified expire time, in seconds.
+PX milliseconds -- Set the specified expire time, in milliseconds.
+NX -- Only set the key if it does not already exist.
+XX -- Only set the key if it already exist.
+</code></pre><p>有了这几个参数SET命令以后可能完全替换掉SETNX,SETEX,PSETEX<br> 可以使用命令SET resource-name randomString NX EX max-lock-time  在max-lock-time秒后，锁自动释放不需要自己比较超时时间。而在同一线程释放锁，可以生成随机字符串，在比较字符串之后再DEL 避免其它线程误删key，释放锁</p>
+<pre><code>if redis.call(&quot;get&quot;,KEYS[1]) == ARGV[1]
+then
+   return redis.call(&quot;del&quot;,KEYS[1])
+else
+   return 0
+end
+</code></pre><p>这是单实例redis情况下。使用redis集群情况下redis则推荐使用the Redlock算法，java实现再github上已有轮子<a href="https://github.com/redisson/redisson" target="_blank" rel="external">https://github.com/redisson/redisson</a><br>算法的流程是这样的：</p>
+<ol>
+<li>客户端记录当前时间戳currentTimestamp</li>
+<li>客户端尝试按顺序对集群中每个redis实例进行获取锁操作，对每个实例也有一个超时时间，比如我整个锁的时间是10秒，那么对每个实例的超时就设置为5~50ms。避免在一个实例上阻塞过久，尽快连接下一个实例</li>
+<li>客户端计算耗费时间t1，在获取到 一半以上的实例锁的时候，耗费时间少于锁的时间的时即为成功获取了锁</li>
+<li>获取成功时，锁的有效时间就是最开始的有效时间 - 耗费的时间t1</li>
+<li>获取失败，客户端应该释放所有实例上的锁</li>
+</ol>
+</div><div class="post-footer"><div class="meta"><div class="info"><i class="fa fa-sun-o"></i><span class="date">2017-08-15</span><i class="fa fa-tag"></i></div></div></div></div><div class="share"><div class="evernote"><a href="javascript:(function(){EN_CLIP_HOST='http://www.evernote.com';try{var%20x=document.createElement('SCRIPT');x.type='text/javascript';x.src=EN_CLIP_HOST+'/public/bookmarkClipper.js?'+(new%20Date().getTime()/100000);document.getElementsByTagName('head')[0].appendChild(x);}catch(e){location.href=EN_CLIP_HOST+'/clip.action?url='+encodeURIComponent(location.href)+'&amp;title='+encodeURIComponent(document.title);}})();" ref="nofollow" target="_blank" class="fa fa-bookmark"></a></div><div class="weibo"><a href="javascript:void((function(s,d,e){try{}catch(e){}var f='http://service.weibo.com/share/share.php?',u=d.location.href,p=['url=',e(u),'&amp;title=',e(d.title),'&amp;appkey=2924220432'].join('');function a(){if(!window.open([f,p].join(''),'mb',['toolbar=0,status=0,resizable=1,width=620,height=450,left=',(s.width-620)/2,',top=',(s.height-450)/2].join('')))u.href=[f,p].join('');};if(/Firefox/.test(navigator.userAgent)){setTimeout(a,0)}else{a()}})(screen,document,encodeURIComponent));" class="fa fa-weibo"></a></div><div class="twitter"><a href="http://twitter.com/home?status=,http://yoursite.com/2017/08/15/redis分布式锁应用/,AoiNeko,redis分布式锁应用,;" class="fa fa-twitter"></a></div></div><div class="pagination"><ul class="clearfix"><li class="pre pagbuttons"><a role="navigation" href="/2017/08/27/bash脚本记录/" title="'bash脚本记录'" class="btn">上一篇</a></li><li class="next pagbuttons"><a role="navigation" href="/2017/08/02/mqtt了解/" title="mqtt了解" class="btn">下一篇</a></li></ul></div></div></div></div></div><script src="/js/jquery.js"></script><script src="/js/jquery-migrate-1.2.1.min.js"></script><script src="/js/jquery.appear.js"></script></body></html>

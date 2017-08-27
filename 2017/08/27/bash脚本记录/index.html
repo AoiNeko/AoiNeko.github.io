@@ -1,0 +1,64 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="author" content="langley, liangli171@gmail.com"><title>'bash脚本记录' · AoiNeko</title><meta name="description" content="bash编写学习变量使用
+value=&amp;quot;Hello World!&amp;quot;
+echo value      # Output: value
+echo $value     # Output: Hello World!
+echo ${value}   # Output: Hello Wor"><meta name="keywords" content="Hexo,Java"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="renderer" content="webkit"><link rel="short icon" href="/images/favicon.png" type="image/x-icon"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/blog_basic.css"><link rel="stylesheet" href="/css/font-awesome.min.css"><link rel="alternate" type="application/atom+xml" title="ATOM 1.0" href="/atom.xml"></head><body><e class="sidebar animated fadeInDown"><div class="logo-title"><div class="title"><img src="/images/mylogo.jpg" style="width:127px;"><h3 title=""><a href="/">AoiNeko</a></h3><div class="description"><p>一些个记录</p></div></div></div><ul class="social-links"></ul><div class="footer"><a target="_blank" href="/"></a><div class="by_farbox"><a href="https://hexo.io/zh-cn/" target="_blank">Hexo&#65281;</a></div></div></e><div class="main"><div class="page-top animated fadeInDown"><div class="nav"><li><a href="/">首页</a></li><li><a href="/archives">归档</a></li></div><div class="information"><div class="back_btn"><li><a onclick="window.history.go(-1)" class="fa fa-chevron-left"> </a></li></div></div></div><div class="autopagerize_page_element"><div class="content"><div class="post-page"><div class="post animated fadeInDown"><div class="post-title"><h3><a>'bash脚本记录'</a></h3></div><div class="post-content"><h3 id="bash编写学习"><a href="#bash编写学习" class="headerlink" title="bash编写学习"></a>bash编写学习</h3><p>变量使用</p>
+<pre><code>value=&quot;Hello World!&quot;
+echo value      # Output: value
+echo $value     # Output: Hello World!
+echo ${value}   # Output: Hello World!       
+echo &quot;value&quot;    # Output: value  
+echo &quot;$value&quot;   # Output: Hello World!     
+echo &quot;${value}&quot; # Output: Hello World!
+</code></pre><p>条件语句</p>
+<pre><code>value=0
+if [ $value == 0 ]; then
+  echo &quot;Zero&quot;
+else
+  echo &quot;Not Zero&quot;
+fi
+</code></pre><p>bash脚本中的fi代表作用域的结束。 如果有另外的条件加上<code>elif [ $value==1 ];then</code>即可。</p>
+<p>方法</p>
+<pre><code>cow_eat() {
+  echo Cow chews $1
+}
+cow_eat grass # Output: Cow chews grass
+</code></pre><p>$1代表第一个参数，输入脚本命令后面带的参数 也以$1,$2来获取。 bash会默认load 用户home目录下的<code>.bashrc</code>文件。可以将通用的方法编写在其中，方便使用</p>
+<p>下面是一个复杂一点的脚本</p>
+<pre><code>#!/bin/bash
+#
+# Egg Timer - for taking periodic breaks from desk work
+#
+
+limit=45
+summary=&quot;The mind becomes better with movement&quot;
+endmessage=&quot;Take a break! Take a short stroll.&quot;
+echo -n $limit
+
+sleeper() {
+  number=$1
+  clock=60
+  while [ $clock != 0 ]; do
+    let &quot;clock = $clock - 1&quot;
+    [ $((number%2)) -eq 0 ] &amp;&amp; echo -n &apos;.&apos; || echo -n &apos;*&apos;
+    sleep 1
+  done
+}
+
+while true; do
+  counter=0
+  while [ $counter != $limit ]; do
+    sleeper $counter
+    let &quot;counter = $counter + 1&quot;    
+    printf &apos;\r%2d&apos; $(($limit - $counter))
+  done
+  if [ $counter == $limit ]; then
+    echo
+    notify-send -u critical -i appointment &quot;$summary&quot; &quot;$endmessage&quot;
+    echo -e &apos;\a&apos; &gt;&amp;2
+    xdg-open https://www.youtube.com/watch?v=Hj0jzepk0WA
+  fi
+done
+</code></pre><p>计时45分钟后发送通知，并使用浏览器打开youtube。<br>这是一篇bash的学习记录</p>
+<p>原文地址 ： <a href="https://www.systemcodegeeks.com/shell-scripting/lets-talk-shell-scripting/" target="_blank" rel="external">https://www.systemcodegeeks.com/shell-scripting/lets-talk-shell-scripting/</a></p>
+</div><div class="post-footer"><div class="meta"><div class="info"><i class="fa fa-sun-o"></i><span class="date">2017-08-27</span><i class="fa fa-tag"></i></div></div></div></div><div class="share"><div class="evernote"><a href="javascript:(function(){EN_CLIP_HOST='http://www.evernote.com';try{var%20x=document.createElement('SCRIPT');x.type='text/javascript';x.src=EN_CLIP_HOST+'/public/bookmarkClipper.js?'+(new%20Date().getTime()/100000);document.getElementsByTagName('head')[0].appendChild(x);}catch(e){location.href=EN_CLIP_HOST+'/clip.action?url='+encodeURIComponent(location.href)+'&amp;title='+encodeURIComponent(document.title);}})();" ref="nofollow" target="_blank" class="fa fa-bookmark"></a></div><div class="weibo"><a href="javascript:void((function(s,d,e){try{}catch(e){}var f='http://service.weibo.com/share/share.php?',u=d.location.href,p=['url=',e(u),'&amp;title=',e(d.title),'&amp;appkey=2924220432'].join('');function a(){if(!window.open([f,p].join(''),'mb',['toolbar=0,status=0,resizable=1,width=620,height=450,left=',(s.width-620)/2,',top=',(s.height-450)/2].join('')))u.href=[f,p].join('');};if(/Firefox/.test(navigator.userAgent)){setTimeout(a,0)}else{a()}})(screen,document,encodeURIComponent));" class="fa fa-weibo"></a></div><div class="twitter"><a href="http://twitter.com/home?status=,http://yoursite.com/2017/08/27/bash脚本记录/,AoiNeko,'bash脚本记录',;" class="fa fa-twitter"></a></div></div><div class="pagination"><ul class="clearfix"><li class="next pagbuttons"><a role="navigation" href="/2017/08/15/redis分布式锁应用/" title="redis分布式锁应用" class="btn">下一篇</a></li></ul></div></div></div></div></div><script src="/js/jquery.js"></script><script src="/js/jquery-migrate-1.2.1.min.js"></script><script src="/js/jquery.appear.js"></script></body></html>
