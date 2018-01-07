@@ -1,0 +1,39 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="author" content="langley, liangli171@gmail.com"><title>flume记录 · AoiNeko</title><meta name="description" content="建立建立agentFlume配置文件保存在本地，以java properties格式保存的文本文件。一个配置文件可以配置一个或多个agent。配置内容包含了每个source，channel，sink以及他们如何串连组合成数据流配置独立组件每个组件（source，channel，sink）都有name"><meta name="keywords" content="Hexo,Java"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="renderer" content="webkit"><link rel="short icon" href="/images/favicon.png" type="image/x-icon"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/blog_basic.css"><link rel="stylesheet" href="/css/font-awesome.min.css"><link rel="alternate" type="application/atom+xml" title="ATOM 1.0" href="/atom.xml"></head><body><e class="sidebar animated fadeInDown"><div class="logo-title"><div class="title"><img src="/images/mylogo.jpg" style="width:127px;"><h3 title=""><a href="/">AoiNeko</a></h3><div class="description"><p>一些个记录</p></div></div></div><ul class="social-links"></ul><div class="footer"><a target="_blank" href="/"></a><div class="by_farbox"><a href="https://hexo.io/zh-cn/" target="_blank">Hexo&#65281;</a></div></div></e><div class="main"><div class="page-top animated fadeInDown"><div class="nav"><li><a href="/">首页</a></li><li><a href="/archives">归档</a></li></div><div class="information"><div class="back_btn"><li><a onclick="window.history.go(-1)" class="fa fa-chevron-left"> </a></li></div></div></div><div class="autopagerize_page_element"><div class="content"><div class="post-page"><div class="post animated fadeInDown"><div class="post-title"><h3><a>flume记录</a></h3></div><div class="post-content"><p>建立<br>建立agent<br>Flume配置文件保存在本地，以java properties格式保存的文本文件。一个配置文件可以配置一个或多个agent。配置内容包含了每个source，channel，sink以及他们如何串连组合成数据流<br>配置独立组件<br>每个组件（source，channel，sink）都有name，type和其他根据类型和实例所特定的properties。Avro作为source就需要配置ip或者hostname和端口用来接受数据。内存channel就有最大容量，HDFS sink则需要指定文件系统URI，创建文件路径 etc。这些属性都要设置在flume agent的配置文件中<br>串连组件<br>agent需要知道每个组件需要载入什么以及如何按顺序连接来组成流。将组件名称列出来，指定每个sink和channel的连接channel。例如：Avro Source和HDFS sink 通过file-channel连接。配置文件中将配置source，sink，channel的名称。以及设置file-channel为source和sink的公用channel。<br>启动agent<br>bin目录下使用shell命令设置agent-name以及指定配置文件<br>    bin/flume-ng agent -n $agent_name -c conf -f conf/flume-conf.properties.template</p>
+<p>一个栗子：<br>    ag1.sources=source1<br>    ag1.channels=channel1<br>    ag1.sinks=sink1</p>
+<pre><code>ag1.sources.source1.type=exec
+ag1.sources.source1.command=tail -f /home/aoineko/test.log
+
+ag1.sinks.sink1.type=logger
+
+ag1.channels.channel1.type=memory
+ag1.channels.channel1.capacity=1000
+ag1.channels.channel1.transactionCapacity = 100
+
+ag1.sources.source1.channels=channel1
+ag1.sinks.sink1.channel=channel1
+</code></pre><p>启动命令<br>     bin/flume-ng agent –conf conf –conf-file conf/expamle.conf –name ag1 -Dflume.root.logger=INFO,console</p>
+<p>启动后监听test.log尾部添加的文本。在控制台输出如下<br>    2017-11-10 17:14:05,850 (lifecycleSupervisor-1-0) [INFO - org.apache.flume.instrumentation.MonitoredCounterGroup.start(MonitoredCounterGroup.java:95)] Component type: SOURCE, name: source1 started<br>    2017-11-10 17:14:09,862 (SinkRunner-PollingRunner-DefaultSinkProcessor) [INFO - org.apache.flume.sink.LoggerSink.process(LoggerSink.java:95)] Event: { headers:{} body: 31 36 3A 35 32 3A 34 30 2E 38 36 37 20 5B 58 4E 16:52:40.867 [XN }<br>    2017-11-10 17:14:09,862 (SinkRunner-PollingRunner-DefaultSinkProcessor) [INFO - org.apache.flume.sink.LoggerSink.process(LoggerSink.java:95)] Event: { headers:{} body: 31 36 3A 35 32 3A 34 30 2E 38 36 37 20 5B 58 4E 16:52:40.867 [XN }</p>
+<p>接下来就是将日志流传入kafka</p>
+<pre><code>配置conf文件
+ag1.sources=source1
+ag1.channels=channel1
+ag1.sinks=sink1
+
+ag1.sources.source1.type=exec
+ag1.sources.source1.command=tail -f /home/aoineko/test.log
+
+ag1.sinks.sink1.type=org.apache.flume.sink.kafka.KafkaSink
+ag1.sinks.sink1.kafka.topic = flumeTopic
+ag1.sinks.sink1.kafka.bootstrap.servers = localhost:32782;localhost:32781
+ag1.sinks.sink1.kafka.flumeBatchSize = 20
+ag1.sinks.sink1.kafka.producer.acks = 1
+ag1.sinks.sink1.kafka.producer.linger.ms = 1
+ag1.sinks.sink1.kafka.producer.compression.type = snappy
+
+ag1.channels.channel1.type=memory
+ag1.channels.channel1.capacity=1000
+ag1.channels.channel1.transactionCapacity = 100
+
+ag1.sources.source1.channels=channel1
+ag1.sinks.sink1.channel=channel1
+</code></pre></div><div class="post-footer"><div class="meta"><div class="info"><i class="fa fa-sun-o"></i><span class="date">2018-01-07</span><i class="fa fa-tag"></i><a href="/tags/devOps/" title="devOps" class="tag">devOps </a></div></div></div></div><div class="share"><div class="evernote"><a href="javascript:(function(){EN_CLIP_HOST='http://www.evernote.com';try{var%20x=document.createElement('SCRIPT');x.type='text/javascript';x.src=EN_CLIP_HOST+'/public/bookmarkClipper.js?'+(new%20Date().getTime()/100000);document.getElementsByTagName('head')[0].appendChild(x);}catch(e){location.href=EN_CLIP_HOST+'/clip.action?url='+encodeURIComponent(location.href)+'&amp;title='+encodeURIComponent(document.title);}})();" ref="nofollow" target="_blank" class="fa fa-bookmark"></a></div><div class="weibo"><a href="javascript:void((function(s,d,e){try{}catch(e){}var f='http://service.weibo.com/share/share.php?',u=d.location.href,p=['url=',e(u),'&amp;title=',e(d.title),'&amp;appkey=2924220432'].join('');function a(){if(!window.open([f,p].join(''),'mb',['toolbar=0,status=0,resizable=1,width=620,height=450,left=',(s.width-620)/2,',top=',(s.height-450)/2].join('')))u.href=[f,p].join('');};if(/Firefox/.test(navigator.userAgent)){setTimeout(a,0)}else{a()}})(screen,document,encodeURIComponent));" class="fa fa-weibo"></a></div><div class="twitter"><a href="http://twitter.com/home?status=,http://yoursite.com/2018/01/07/flume-Setup/,AoiNeko,flume记录,;" class="fa fa-twitter"></a></div></div><div class="pagination"><ul class="clearfix"><li class="pre pagbuttons"><a role="navigation" href="/2018/01/07/logstash/" title="logstash记录" class="btn">上一篇</a></li><li class="next pagbuttons"><a role="navigation" href="/2018/01/07/kafka-setup/" title="kafka安装记录" class="btn">下一篇</a></li></ul></div></div></div></div></div><script src="/js/jquery.js"></script><script src="/js/jquery-migrate-1.2.1.min.js"></script><script src="/js/jquery.appear.js"></script></body></html>
