@@ -1,0 +1,53 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="author" content="langley, liangli171@gmail.com"><title>使用docker swarm搭建容器集群 · AoiNeko</title><meta name="description" content="有两台ECS用来搭建测试环境，分别都安装了docker-engine。两边的docker都是部署的java服务，web服务注册在一个eureka的容器里面。为了方便，本来两台服务器的应用都是部署独立不同模块，服务调用都只在同一台宿主机器上。
+现在由于业务扩展的需要，本来独立的模块之间将会需要互相调用"><meta name="keywords" content="Hexo,Java"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="renderer" content="webkit"><link rel="short icon" href="/images/favicon.png" type="image/x-icon"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/blog_basic.css"><link rel="stylesheet" href="/css/font-awesome.min.css"><link rel="alternate" type="application/atom+xml" title="ATOM 1.0" href="/atom.xml"></head><body><e class="sidebar animated fadeInDown"><div class="logo-title"><div class="title"><img src="/images/mylogo.jpg" style="width:127px;"><h3 title=""><a href="/">AoiNeko</a></h3><div class="description"><p>一些个记录</p></div></div></div><ul class="social-links"></ul><div class="footer"><a target="_blank" href="/"></a><div class="by_farbox"><a href="https://hexo.io/zh-cn/" target="_blank">Hexo&#65281;</a></div></div></e><div class="main"><div class="page-top animated fadeInDown"><div class="nav"><li><a href="/">首页</a></li><li><a href="/archives">归档</a></li></div><div class="information"><div class="back_btn"><li><a onclick="window.history.go(-1)" class="fa fa-chevron-left"> </a></li></div></div></div><div class="autopagerize_page_element"><div class="content"><div class="post-page"><div class="post animated fadeInDown"><div class="post-title"><h3><a>使用docker swarm搭建容器集群</a></h3></div><div class="post-content"><p>有两台ECS用来搭建测试环境，分别都安装了docker-engine。两边的docker都是部署的java服务，web服务注册在一个eureka的容器里面。为了方便，本来两台服务器的应用都是部署独立不同模块，服务调用都只在同一台宿主机器上。</p>
+<p>现在由于业务扩展的需要，本来独立的模块之间将会需要互相调用。而目前的状况是，ecs1上的容器之间可以互相调用，而ECS1上的容器1(IP：192.168.0.123)访问 ECS2上的容器2(192.168.0.112)时，由于是各自ecs上的内网，容器1访问<br>容器2IP/service?s=xx在自己ECS1的内网找而找到的错误的容器或者404。</p>
+<p>我们的测试ECS没有用阿里云的容器服务，所以干脆建立容器集群也纯人工了</p>
+<p>接下来是我在aliyun上安装docker swarm的记录</p>
+<h2 id="安装dockers-machine"><a href="#安装dockers-machine" class="headerlink" title="安装dockers-machine"></a>安装dockers-machine</h2><p>LINUX上安装<br>    $ base=<a href="https://github.com/docker/machine/releases/download/v0.14.0" target="_blank" rel="external">https://github.com/docker/machine/releases/download/v0.14.0</a> &amp;&amp;<br>      curl -L $base/docker-machine-$(uname -s)-$(uname -m) &gt;/tmp/docker-machine &amp;&amp;<br>      sudo install /tmp/docker-machine /usr/local/bin/docker-machine</p>
+<p>直接执行命令 ，结果伟大的GXFXW把GitHub给屏蔽了。只能自己在笔记本上下载 <code>https://github.com/docker/machine/releases/download/v0.14.0/docker-machine-Linux-x86_64</code> 了用windows的powershell scp到linux上</p>
+<p>执行完成后使用 <code>docker-machine version</code>  查看是否成功<br>    docker-machine version 0.14.0, build 89b8332</p>
+<h3 id="中断"><a href="#中断" class="headerlink" title="中断"></a>中断</h3><p><a href="https://docs.docker.com/swarm/swarm_at_scale/deploy-app/" target="_blank" rel="external">Docker 文档</a> 上swarm的示例是db web app 系统的所有组件或者服务都由consul的服务注册，使用key映射所有服务的ip，如下图</p>
+<p><img src="https://docs.docker.com/swarm/images/final-result.png" alt="docker swarm" title="docker example"></p>
+<p>而我现在只需要让两个ecs的java应用互相访问即可， db和redis都是直接用IP连接的，不需要注册服务consul中。 并且如果修改了部署方式，之前的使用jenkins 从git获取最新代码后maven构建 再接着使用脚本build webapp docker容器的方式都要重写。<br>实在觉得这样费时费力又没什么意义的事情还不如用虚拟机自己测试。于是果断放弃使用docker-machine和全容器集群</p>
+<h3 id="妥协方案"><a href="#妥协方案" class="headerlink" title="妥协方案"></a>妥协方案</h3><p>  领悟到实际上我只是要在两台ecs上的容器能够互相联通网络，并在spring-eureka上注册的ip地址不是192网段的ip，我转而查找通过docker swarm让两台ecs上的容器进入同一局域网络的方法。</p>
+<h4 id="1-建立docker-swarm-manager"><a href="#1-建立docker-swarm-manager" class="headerlink" title="1.建立docker swarm manager"></a>1.建立docker swarm manager</h4><pre><code>$ docker swarm init --advertise-addr [ECS1内网IP]
+Swarm initialized: current node (bvz81updecsj6wjz393c09vti) is now a manager.
+</code></pre><h4 id="2-节点（ECS2）加入swarm"><a href="#2-节点（ECS2）加入swarm" class="headerlink" title="2.节点（ECS2）加入swarm"></a>2.节点（ECS2）加入swarm</h4><pre><code>$docker swarm join \
+--token SWMTKN-1-3pu6hszjas19xyp7ghgosyx9k8atbfcr8p2is99znpy26u2lkl-1awxwuwd3z9j1z3puu7rcgdbx \
+[ECS1内网IP]:2377
+</code></pre><p>加入后在manager节点上， <code>docker node ls</code>命令可以查看swarm的节点</p>
+<pre><code>[apms@iZwz9g3u73g9o288clbphfZ ~]$ docker node ls
+ID                            HOSTNAME                  STATUS              AVAILABILITY        MANAGER STATUS
+ksi55ircq33xmbtookqhchtfg     iZwz9clc72mjeekduvvywjZ   Ready               Active
+s2fsz0j7w17u1vlcowrgzfnvd *   iZwz9g3u73g9o288clbphfZ   Ready               Active              Leader
+</code></pre><h4 id="3-创建网络"><a href="#3-创建网络" class="headerlink" title="3.创建网络"></a>3.创建网络</h4><pre><code>docker network create ap -d overlay 
+</code></pre><p>在ECS1(manager)上创建一个overlay类型driver的docker网络，</p>
+<h4 id="4-测试"><a href="#4-测试" class="headerlink" title="4.测试"></a>4.测试</h4><p>创建网络后，我在ecs2上使用 docker network ls实际上没有查询到我刚创建的ap网络</p>
+<pre><code>[airparking@iZwz9clc72mjeekduvvywjZ ~]$ docker network ls
+NETWORK ID          NAME                DRIVER              SCOPE
+29371f645e0e        bridge              bridge              local
+5082b8cce97b        docker_gwbridge     bridge              local
+adf48c6e5048        es_esnet            bridge              local
+493b5765e721        host                host                local
+3cseto8wgqtf        ingress             overlay             swarm
+c6722fca6cdd        lpr_default         bridge              local
+7d065c5bf106        none                null                local
+222e338fa9c3        registry_default    bridge              local
+</code></pre><p> 但是实际上使用docker network connet ap {container1}后，控制台并没有报错。进入这个容器后查看网络情况</p>
+<pre><code>[airparking@iZwz9clc72mjeekduvvywjZ ~]$ docker exec -it container1 /bin/sh
+/usr/local/app # ifconfig
+eth0      Link encap:Ethernet  HWaddr 02:42:C0:A8:00:0
+.....
+eth1      Link encap:Ethernet  HWaddr 02:42:0A:00:00:0F
+          inet addr:10.0.0.15  Bcast:10.0.0.255  Mask:255.255.255.0
+          UP BROADCAST RUNNING MULTICAST  MTU:1450  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:0 (0.0 B)  TX bytes:0 (0.0 B)
+
+lo        Link encap:Local Loopback
+.....
+</code></pre><p>可见eh1是新增的ap网络。 这是回到ECS1上，连入另外一个容器，使用wget尝试了一下刚添加到AP的 contain1的服务，是成功连接。</p>
+<h4 id="5-容器全加入网络"><a href="#5-容器全加入网络" class="headerlink" title="5.容器全加入网络"></a>5.容器全加入网络</h4><p>在docker运行脚本 docker run XXXX 后加入参数 –network=ap.重启后spring-eureka注册的IP地址全变成了ap网络下10.0.0.0/24网络的。容器之间可以通过这个注册的IP互相调用了</p>
+</div><div class="post-footer"><div class="meta"><div class="info"><i class="fa fa-sun-o"></i><span class="date">2018-08-09</span><i class="fa fa-tag"></i><a href="/tags/docker-devOp/" title="docker, devOp" class="tag">docker, devOp </a></div></div></div></div><div class="share"><div class="evernote"><a href="javascript:(function(){EN_CLIP_HOST='http://www.evernote.com';try{var%20x=document.createElement('SCRIPT');x.type='text/javascript';x.src=EN_CLIP_HOST+'/public/bookmarkClipper.js?'+(new%20Date().getTime()/100000);document.getElementsByTagName('head')[0].appendChild(x);}catch(e){location.href=EN_CLIP_HOST+'/clip.action?url='+encodeURIComponent(location.href)+'&amp;title='+encodeURIComponent(document.title);}})();" ref="nofollow" target="_blank" class="fa fa-bookmark"></a></div><div class="weibo"><a href="javascript:void((function(s,d,e){try{}catch(e){}var f='http://service.weibo.com/share/share.php?',u=d.location.href,p=['url=',e(u),'&amp;title=',e(d.title),'&amp;appkey=2924220432'].join('');function a(){if(!window.open([f,p].join(''),'mb',['toolbar=0,status=0,resizable=1,width=620,height=450,left=',(s.width-620)/2,',top=',(s.height-450)/2].join('')))u.href=[f,p].join('');};if(/Firefox/.test(navigator.userAgent)){setTimeout(a,0)}else{a()}})(screen,document,encodeURIComponent));" class="fa fa-weibo"></a></div><div class="twitter"><a href="http://twitter.com/home?status=,http://yoursite.com/2018/08/09/使用docker-swarm搭建容器集群/,AoiNeko,使用docker swarm搭建容器集群,;" class="fa fa-twitter"></a></div></div><div class="pagination"><ul class="clearfix"><li class="next pagbuttons"><a role="navigation" href="/2018/07/31/Spring-Cloud-一/" title="Spring Cloud &lt;一&gt;" class="btn">下一篇</a></li></ul></div></div></div></div></div><script src="/js/jquery.js"></script><script src="/js/jquery-migrate-1.2.1.min.js"></script><script src="/js/jquery.appear.js"></script></body></html>
